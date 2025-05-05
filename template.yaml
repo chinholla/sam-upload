@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-upload
+
+  Sample SAM Template for sam-upload
+
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+
+  PresignedUrlAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,OPTIONS'"
+        AllowHeaders: "'Content-Type'"
+        AllowOrigin: "'*'"
+  PresignedUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 30
+      Runtime: nodejs20.x
+      Handler: app.handler
+      Architectures:
+        - arm64
+      CodeUri: dist/
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref MyS3Bucket
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref MyS3Bucket
+      Events:
+        PresignedUrlAPI:
+          Type: Api
+          Properties:
+            Path: /presigned-url
+            Method: GET
+            RestApiId: !Ref PresignedUrlAPI
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${PresignedUrlAPI}.execute-api.${AWS::Region}.amazonaws.com/prod/presigned-url"
+  BucketName:
+    Description: "Name of the created S3 bucket"
+    Value: !Ref MyS3Bucket
